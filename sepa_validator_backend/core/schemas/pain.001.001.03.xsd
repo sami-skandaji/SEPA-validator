@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03"
+           xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03"
+           elementFormDefault="qualified">
+
+  <xs:element name="Document" type="DocumentType"/>
+
+  <xs:complexType name="DocumentType">
+    <xs:sequence>
+      <xs:element name="CstmrCdtTrfInitn" type="xs:anyType"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

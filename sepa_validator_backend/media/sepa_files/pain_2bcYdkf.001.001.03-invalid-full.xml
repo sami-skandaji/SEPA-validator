@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>MSG0001</MsgId>
+      <CreDtTm>2025-07-10T10:00:00</CreDtTm>
+      <NbOfTxs>2</NbOfTxs>
+      <CtrlSum>-400.00</CtrlSum>
+      <InitgPty>
+        <Nm></Nm> <!-- ❌ Nom initiateur vide -->
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMT0001</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>true</BtchBookg>
+      <NbOfTxs>2</NbOfTxs>
+      <CtrlSum>400.00</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>2025-07-11</ReqdExctnDt>
+      <Dbtr>
+        <Nm>Jean Dupont Société Importante Très Long Nom Qui Dépasse Les 70 Caractères</Nm> <!-- ❌ Trop long -->
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>FR7630006000011234567890189</IBAN> <!-- ✅ -->
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>BADBIC123456</BIC> <!-- ❌ Faux BIC -->
+        </FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>SLEV</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>TRX0001</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USD">-250.00</InstdAmt> <!-- ❌ Mauvaise devise + montant négatif -->
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>DEUTDEFF</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm></Nm> <!-- ❌ Nom vide -->
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89370400440532013000</IBAN>
+          </Id>
+        </CdtrAcct>
+      </CdtTrfTxInf>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>TRX0002</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">650.00</InstdAmt> <!-- ✅ -->
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>DEUTDEFF</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Marie Curie</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89370400440532013000</IBAN>
+          </Id>
+        </CdtrAcct>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>

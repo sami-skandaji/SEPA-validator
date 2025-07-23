@@ -1,0 +1,10 @@
+<h2>Complétez votre profil</h2>
+<form method="post">
+  {% csrf_token %}
+  <label for="username">Nom d'utilisateur :</label>
+  <input type="text" name="username" required><br><br>
+
+  {{ form.as_p }}
+
+  <button type="submit">Sauvegarder</button>
+</form>

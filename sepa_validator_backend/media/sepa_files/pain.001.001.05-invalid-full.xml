@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.05">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>MSG0003</MsgId>
+      <CreDtTm>2025-07-10T12:00:00</CreDtTm>
+      <NbOfTxs>2</NbOfTxs>
+      <CtrlSum>0.00</CtrlSum>
+      <InitgPty>
+        <Nm></Nm> <!-- ❌ Vide -->
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMT0003</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>false</BtchBookg>
+      <NbOfTxs>2</NbOfTxs>
+      <CtrlSum>0.00</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>2025-07-12</ReqdExctnDt>
+      <Dbtr>
+        <Nm>Marie D.</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>FR76FAKEIBAN</IBAN> <!-- ❌ Mauvais format -->
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>12345678</BIC> <!-- ❌ BIC non conforme -->
+        </FinInstnId>
+      </DbtrAgt>
+
+      <!-- Paiement 1 -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>END123</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">-100.00</InstdAmt> <!-- ❌ montant négatif -->
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>DEUTDEFF</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Jean</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89INVALIDIBAN</IBAN> <!-- ❌ mauvais IBAN -->
+          </Id>
+        </CdtrAcct>
+      </CdtTrfTxInf>
+
+      <!-- Paiement 2 sans nom de créancier -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>END456</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USD">500.00</InstdAmt> <!-- ❌ devise USD -->
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>DEUTDEFF</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm></Nm> <!-- ❌ nom vide -->
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89370400440532013000</IBAN>
+          </Id>
+        </CdtrAcct>
+      </CdtTrfTxInf>
+
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>

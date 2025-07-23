@@ -1,0 +1,33 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Résultat de la validation SEPA</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="card shadow p-4">
+        <h3 class="mb-3">Résultat de la validation</h3>
+
+        <p><strong>Nom du fichier :</strong> {{ filename }}</p>
+        <p><strong>Est valide :</strong> 
+            {% if is_valid %}
+                ✅ Oui
+            {% else %}
+                ❌ Non
+            {% endif %}
+        </p>
+        <p><strong>Rapport de validation :</strong></p>
+        <pre class="bg-light p-3">{{ report }}</pre>
+
+        <div class="mt-4">
+            <a href="{% url 'upload_sepa_file' %}" class="btn btn-primary">Valider un autre fichier</a>
+            <a href="{% url 'home' %}" class="btn btn-secondary">Retour à l'accueil</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,107 @@
+{% load static %}
+{% load form_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Register</title>
+
+  <!-- Bootstrap et Font Awesome -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+
+  <!-- Ton CSS personnalisé -->
+  <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+</head>
+<body>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="container-fluid px-1 px-md-5 px-lg-1 px-xl-5 py-5 mx-auto">
+    <div class="card card0 border-0">
+      <div class="row d-flex">
+
+        <!-- Logo -->
+        <div class="col-lg-6 d-flex justify-content-center align-items-center">
+          <div class="card1 pb-5">
+            <div class="row px-3 justify-content-center border-line">
+              <img src="{% static 'core/img/logo.png' %}" class="image" alt="logo">
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="col-lg-6">
+          <div class="card2 card border-0 px-4 py-5">
+
+            <div class="row px-3 mb-4">
+              <h5 class="mb-0 mr-4 mt-2">Register</h5>
+            </div>
+
+            <!-- Erreurs globales -->
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <!-- Username -->
+            <div class="row px-3">
+              <label class="mb-1"><h6 class="mb-0 text-sm">Username</h6></label>
+              {{ form.username|add_class:"form-control" }}
+              {% if form.username.errors %}
+                <small class="text-danger">{{ form.username.errors.0 }}</small>
+              {% endif %}
+            </div>
+
+            <!-- Password1 -->
+            <div class="row px-3 mt-3">
+              <label class="mb-1"><h6 class="mb-0 text-sm">Password</h6></label>
+              {{ form.password1|add_class:"form-control" }}
+              {% if form.password1.errors %}
+                <small class="text-danger">{{ form.password1.errors.0 }}</small>
+              {% endif %}
+            </div>
+
+            <!-- Password2 -->
+            <div class="row px-3 mt-3">
+              <label class="mb-1"><h6 class="mb-0 text-sm">Confirm Password</h6></label>
+              {{ form.password2|add_class:"form-control" }}
+              {% if form.password2.errors %}
+                <small class="text-danger">{{ form.password2.errors.0 }}</small>
+              {% endif %}
+            </div>
+
+            <!-- Submit -->
+            <div class="row mb-3 px-3 mt-4">
+              <button type="submit" class="btn btn-blue text-center">Register</button>
+            </div>
+
+            <!-- Login link -->
+            <div class="row mb-4 px-3">
+              <small class="font-weight-bold">
+                Already have an account?
+                <a class="text-danger" href="{% url 'login' %}">Login</a>
+              </small>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="bg-blue py-4">
+        <div class="row px-3">
+          <small class="ml-4 ml-sm-5 mb-2">Copyright © 2025. All rights reserved.</small>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+</body>
+</html>
