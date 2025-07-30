@@ -1,17 +1,32 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "../assets/styles.css";
 
 const Upload = () => {
   const [file, setFile] = useState(null);
+  const [xmlContent, setXmlContent] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-    setError(""); // réinitialiser l'erreur si un nouveau fichier est choisi
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    setError("");
+
+    // Lire le contenu XML
+    if (selectedFile) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setXmlContent(event.target.result);
+      };
+      reader.readAsText(selectedFile);
+    } else {
+      setXmlContent("");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -34,7 +49,7 @@ const Upload = () => {
         },
       });
 
-      navigate("/upload/success", { state: { result: res.data } });
+      navigate(`/sepa/${res.data.id}`);
     } catch (err) {
       const errorMsg =
         err.response?.data?.detail ||
@@ -48,15 +63,19 @@ const Upload = () => {
 
   return (
     <div className="container mt-5">
-      <h2 className="mb-4 text-center"> Valider un fichier SEPA XML</h2>
+      <h2 className="text-center text-primary fw-bold mb-4">
+        Validateur de fichiers SEPA
+      </h2>
 
       <div className="card shadow p-4">
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="xmlFile" className="font-weight-bold">Fichier XML :</label>
+          <div className="mb-3">
+            <label htmlFor="xmlFile" className="form-label fw-semibold">
+              Sélectionner un fichier XML :
+            </label>
             <input
               type="file"
-              className="form-control-file"
+              className="form-control"
               id="xmlFile"
               accept=".xml"
               onChange={handleFileChange}
@@ -65,9 +84,20 @@ const Upload = () => {
           </div>
 
           {file && (
-            <p className="mt-2 text-muted">
-              ✅ Fichier sélectionné : <strong>{file.name}</strong>
-            </p>
+            <div className="alert alert-info py-2">
+              Fichier sélectionné : <strong>{file.name}</strong>
+            </div>
+          )}
+
+          {xmlContent && (
+            <div className="mb-3">
+              <label className="form-label fw-semibold">Contenu XML :</label>
+              <div className="border rounded p-3 bg-dark text-light" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                <SyntaxHighlighter language="xml" style={atomDark} showLineNumbers wrapLongLines>
+                  {xmlContent}
+                </SyntaxHighlighter>
+              </div>
+            </div>
           )}
 
           {error && (
@@ -76,21 +106,23 @@ const Upload = () => {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary mt-3" disabled={isUploading}>
-            {isUploading ? (
-              <>
-                <span className="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-              </>
-            ) : (
-              "Valider"
-            )}
-          </button>
+          <div className="d-grid gap-2">
+            <button type="submit" className="btn btn-primary" disabled={isUploading}>
+              {isUploading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Envoi en cours...
+                </>
+              ) : (
+                "Valider le fichier"
+              )}
+            </button>
+          </div>
         </form>
 
-        <div className="mt-4 text-center">
-          <button className="btn btn-link" onClick={() => navigate("/dashboard")}>
-             Retour à l'accueil
+        <div className="text-center mt-4">
+          <button className="btn btn-outline-secondary" onClick={() => navigate("/dashboard")}>
+            ⬅ Retour au tableau de bord
           </button>
         </div>
       </div>

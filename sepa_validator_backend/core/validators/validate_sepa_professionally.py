@@ -4,6 +4,7 @@ from lxml import etree
 from core.sepa_business_rules import run_business_checks
 from .validate_xsd import validate_with_xsd
 from django.conf import settings
+from core.utils.messages import make_message
 
 # Utilise BASE_DIR de settings si défini
 BASE_DIR = getattr(settings, "BASE_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -68,73 +69,95 @@ def basic_sepa_checks(xml_path):
         if amt.get('Ccy') != 'EUR'
     ]
     if invalid_currency_elements:
-        results.append("❌ Certaines devises ne sont pas en EUR.")
+        results.append(make_message(
+            "error",
+            "NON_EUR_CURRENCY",
+            "InstdAmt",
+            "Certaines devises ne sont pas en EUR."
+        ))
     else:
-        results.append("✅ Toutes les devises sont en EUR.")
+        results.append(make_message(
+            "success",
+            "EUR_ONLY",
+            "InstdAmt",
+            "Toutes les devises sont en EUR."
+        ))
 
     # IBAN
     invalid_ibans = [iban.text.strip() for iban in tree.xpath('//ns:IBAN', namespaces=ns)
-                     if not re.match(r'^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$', iban.text.strip())]
+                     if not re.match(r'^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$', (iban.text or "").strip())]
     if invalid_ibans:
-        results.append("❌ IBANs invalides : " + ", ".join(invalid_ibans))
+        results.append(make_message(
+            "error",
+            "INVALID_IBAN",
+            "IBAN",
+            f"IBANs invalides : {', '.join(invalid_ibans)}"
+        ))
     else:
-        results.append("✅ IBANs valides.")
+        results.append(make_message(
+            "success",
+            "VALID_IBAN",
+            "IBAN",
+            "Tous les IBANs sont valides."
+        ))
 
     # Montants
     invalid_amounts = []
     for amt in tree.xpath('//ns:InstdAmt', namespaces=ns):
         try:
-            value = float(amt.text.strip())
+            value = float((amt.text or "").strip())
             if value <= 0 or value > 9999999999.99:
-                invalid_amounts.append(amt.text.strip())
+                invalid_amounts.append((amt.text or "").strip())
         except:
-            invalid_amounts.append(amt.text.strip())
+            invalid_amounts.append((amt.text or "").strip())
     if invalid_amounts:
-        results.append("❌ Montants invalides : " + ", ".join(invalid_amounts))
+        results.append(make_message("error", "INVALID_AMOUNT", "InstdAmt", f"Montants invalides : {', '.join(invalid_amounts)}"))
     else:
-        results.append("✅ Montants valides.")
+        results.append(make_message("success", "VALID_AMOUNT", "InstdAmt", "Montants valides."))
 
     # BIC
     invalid_bics = [bic.text.strip() for bic in tree.xpath('//ns:BIC', namespaces=ns)
-                    if not re.match(r'^[A-Z0-9]{8}([A-Z0-9]{3})?$', bic.text.strip())]
+                    if not re.match(r'^[A-Z0-9]{8}([A-Z0-9]{3})?$', (bic.text or "").strip())]
     if invalid_bics:
-        results.append("❌ BICs invalides : " + ", ".join(invalid_bics))
+        results.append(make_message("error", "INVALID_BIC", "BIC", f"BICs invalides : {', '.join(invalid_bics)}"))
     else:
-        results.append("✅ BICs valides.")
+        results.append(make_message("success", "VALID_BIC", "BIC", "BICs valides."))
 
     # Noms débiteur/créancier
-    for role, tag in [('débiteur', 'Dbtr'), ('créancier', 'Cdtr')]:
-        missing_names = [etree.tostring(e, pretty_print=True, encoding='unicode')
-                         for e in tree.xpath(f'//ns:{tag}', namespaces=ns)
-                         if e.find('ns:Nm', namespaces=ns) is None or not e.find('ns:Nm', namespaces=ns).text.strip()]
+    for role, tag, field in [('débiteur', 'Dbtr', 'Dbtr.Nm'), ('créancier', 'Cdtr', 'Cdtr.Nm')]:
+        missing_names = []
+        for e in tree.xpath(f'//ns:{tag}', namespaces=ns):
+            name_elem = e.find('ns:Nm', namespaces=ns)
+            if name_elem is None or not (name_elem.text or "").strip():
+                missing_names.append(etree.tostring(e, pretty_print=True, encoding='unicode'))
         if missing_names:
-            results.append(f"❌ Noms de {role}s manquants.")
+            results.append(make_message("error", f"MISSING_{tag.upper()}_NAME", field, f"Noms de {role}s manquants."))
         else:
-            results.append(f"✅ Tous les {role}s ont un nom.")
+            results.append(make_message("success", f"VALID_{tag.upper()}_NAME", field, f"Tous les {role}s ont un nom."))
 
     # Longueur des noms
     long_names = []
     for tag in ['Dbtr', 'Cdtr']:
         for e in tree.xpath(f'//ns:{tag}', namespaces=ns):
             name_elem = e.find('ns:Nm', namespaces=ns)
-            if name_elem is not None and len(name_elem.text.strip()) > 70:
-                long_names.append(name_elem.text.strip())
+            if name_elem is not None and len((name_elem.text or "").strip()) > 70:
+                long_names.append((name_elem.text or "").strip())
     if long_names:
-        results.append("❌ Certains noms dépassent 70 caractères : " + ", ".join(long_names))
+        results.append(make_message("warning", "LONG_NAMES", "Dbtr.Nm/Cdtr.Nm", f"Certains noms dépassent 70 caractères : {', '.join(long_names)}"))
     else:
-        results.append("✅ Tous les noms ≤ 70 caractères.")
+        results.append(make_message("success", "NAMES_OK", "Dbtr.Nm/Cdtr.Nm", "Tous les noms ≤ 70 caractères."))
 
     # Paiements
     if not tree.xpath('//ns:CdtTrfTxInf', namespaces=ns) and not tree.xpath('//ns:DrctDbtTxInf', namespaces=ns):
-        results.append("❌ Aucun paiement trouvé.")
+        results.append(make_message("error", "NO_PAYMENT", "CdtTrfTxInf/DrctDbtTxInf", "Aucun paiement trouvé."))
     else:
-        results.append("✅ Paiements trouvés.")
+        results.append(make_message("success", "PAYMENTS_FOUND", "CdtTrfTxInf/DrctDbtTxInf", "Paiements trouvés."))
 
     # InitgPty/Nm
     if not tree.xpath('//ns:InitgPty/ns:Nm', namespaces=ns):
-        results.append("❌ InitgPty/Nm manquant.")
+        results.append(make_message("error", "MISSING_INITGPTY", "InitgPty.Nm", "InitgPty/Nm manquant."))
     else:
-        results.append("✅ InitgPty/Nm présent.")
+        results.append(make_message("success", "INITGPTY_PRESENT", "InitgPty.Nm", "InitgPty/Nm présent."))
 
     return results
 

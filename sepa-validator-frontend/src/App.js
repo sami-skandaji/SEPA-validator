@@ -3,9 +3,9 @@ import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Dashboard from "./components/Dashboard";
 import Upload from "./components/Upload";
-import UploadSuccess from "./components/UploadSuccess";
 import CompleteProfile from "./components/CompleteProfile";
 import PrivateRoute from "./PrivateRoute";
+import SepaDetailPage from './components/SepaDetailPage';
 
 function App() {
   return (
@@ -17,7 +17,7 @@ function App() {
 
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/upload" element={<PrivateRoute><Upload /></PrivateRoute>} />
-        <Route path="/upload/success" element={<PrivateRoute><UploadSuccess /></PrivateRoute>} />
+        <Route path="/sepa/:id" element={<PrivateRoute><SepaDetailPage /></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

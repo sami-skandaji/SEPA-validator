@@ -1,8 +1,10 @@
-from django.urls import path
+from django.contrib import admin
+from django.urls import path, include
 from core import views
 from .views import upload_sepa_file,  upload_success
 
 urlpatterns = [
+    path('admin/', admin.site.urls),
     path('signup/', views.signup_view, name='signup'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),

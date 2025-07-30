@@ -14,13 +14,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import SepaFile
 from .forms import SepaFileUploadForm
 from .validators.validate_sepa_professionally import validate_xml_professionally, detect_sepa_type_and_version
+from core.utils.sepa_extractor import extract_sepa_details
 from .serializers import SepaValidationResultSerializer, SepaFileUploadSerializer
 from .filters import SepaFileFilter
 from rest_framework.filters import OrderingFilter
 from django.contrib.auth.models import User
 
 
-# API REST Register
 class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -42,7 +42,6 @@ class RegisterAPIView(APIView):
         return Response({"message": "Inscription réussie."}, status=status.HTTP_201_CREATED)
 
 
-# API REST Login
 class CustomAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request': request})
@@ -50,18 +49,18 @@ class CustomAuthToken(ObtainAuthToken):
         user = serializer.validated_data['user']
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key})
-    
-#afficher le nom du User connecté
+
+
 class UserInfoAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         return Response({
             "username": request.user.username,
             "email": request.user.email,
         })
-    
 
-# Upload d’un fichier XML
+
 class SepaUploadAPIView(APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
@@ -74,39 +73,42 @@ class SepaUploadAPIView(APIView):
             sepa_file.save()
 
             result = validate_xml_professionally(sepa_file.xml_file.path)
-            report = []
+            print("Business checks:", result["business_checks"])
+            structured_report = (
+                (result["xsd_message"]["errors"] if isinstance(result["xsd_message"], dict) and not result["xsd_valid"] else []) +
+                result["basic_checks"] +
+                result["business_checks"]
+            )
 
-            # Extraire la version
-            import xml.etree.ElementTree as ET
             try:
+                import xml.etree.ElementTree as ET
                 tree = ET.parse(sepa_file.xml_file.path)
                 root = tree.getroot()
                 namespace_uri = root.tag[root.tag.find("{") + 1:root.tag.find("}")]
-                version = namespace_uri.split(":")[-1]  # Extrait "pain.001.001.03"
+                version = namespace_uri.split(":")[-1]
                 sepa_file.version = version
             except Exception as e:
                 sepa_file.version = "inconnue"
 
-            # Validation XSD
-            if result["xsd_valid"]:
-                report.append("✅ Validation XSD réussie.")
-            else:
-                report.append(f"❌ {result['xsd_message']}")
+            sepa_file.validation_report = structured_report
+            sepa_file.is_valid = all(
+                (not isinstance(item, dict) or item.get("type") != "error")
+                for item in structured_report
+            )
+            try:
+                extracted = extract_sepa_details(sepa_file.xml_file.path)
+                sepa_file.extracted_data = extracted
+            except Exception as e:
+                print(f"Erreur lors de l'extraction des données : {e}")
 
-            report.append("\n🔍 Règles métier :")
-            for rule in result["business_checks"]:
-                report.append(rule)
-
-            sepa_file.is_valid = result["xsd_valid"] and all("❌" not in r for r in result["business_checks"])
-            sepa_file.validation_report = "\n".join(report)
             sepa_file.save()
 
-            serializer = SepaValidationResultSerializer(sepa_file)
+            serializer = SepaValidationResultSerializer(sepa_file, context={"request": request})
             return Response(serializer.data, status=200)
 
         return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Liste des fichiers SEPA avec filtres
+
 class SepaValidationResultListAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SepaValidationResultSerializer
@@ -133,27 +135,31 @@ class SepaValidationResultListAPIView(generics.ListAPIView):
         return queryset
 
 
-# Détail d’un fichier
 class SepaValidationDetailAPIView(RetrieveAPIView):
     queryset = SepaFile.objects.all()
     serializer_class = SepaValidationResultSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        sepa_details = extract_sepa_details(instance.xml_file.path)
+        response_data = serializer.data
+        response_data["sepa_details"] = sepa_details
+        return Response(response_data)
 
 
-# Suppression d’un fichier
 class SepaValidationDeleteAPIView(DestroyAPIView):
     queryset = SepaFile.objects.all()
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
-
         if instance.xml_file:
             instance.xml_file.delete(save=False)
-
         instance.delete()
         return Response({"detail": "Fichier supprimé avec succès."}, status=status.HTTP_204_NO_CONTENT)
 
 
-# Mise à jour d’un fichier
 class SepaFileUpdateAPIView(RetrieveUpdateAPIView):
     queryset = SepaFile.objects.all()
     serializer_class = SepaFileUploadSerializer
@@ -163,7 +169,6 @@ class SepaFileUpdateAPIView(RetrieveUpdateAPIView):
         response = super().update(request, *args, **kwargs)
         instance = self.get_object()
 
-        #  Re-analyse du fichier XML pour extraire la version
         try:
             with open(instance.xml_file.path, 'r', encoding='utf-8') as f:
                 content = f.read().lower()
@@ -178,15 +183,13 @@ class SepaFileUpdateAPIView(RetrieveUpdateAPIView):
         except Exception as e:
             print(f"Erreur lors de l'extraction de version : {e}")
 
-        # 🔁 Revalider le fichier au cas où
         result = validate_xml_professionally(instance.xml_file.path)
-        instance.is_valid = result["xsd_valid"] and all("❌" not in r for r in result["business_checks"])
-        instance.validation_report = "\n".join(result["business_checks"])
+        instance.is_valid = result["xsd_valid"] and all("❌" not in str(r) for r in result["business_checks"])
+        instance.validation_report = result["business_checks"]
         instance.save()
-
         return Response(self.get_serializer(instance).data)
 
-# Résumé global
+
 class SepaSummaryView(APIView):
     def get(self, request):
         total = SepaFile.objects.count()
@@ -201,78 +204,54 @@ class SepaSummaryView(APIView):
             "last_uploaded": last_uploaded.uploaded_at.strftime("%d%m%Y %H:%M") if last_uploaded else None
         })
 
-# mise a jour versions
+
 class UpdateSepaVersionsAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        files = SepaFile.objects.all()
         updated = 0
-        failed = []
 
-        for sepa_file in SepaFile.objects.all():
+        for f in files:
             try:
-                version = detect_sepa_type_and_version(sepa_file.xml_file.path)
-                if sepa_file.version != version:
-                    sepa_file.version = version
-                    sepa_file.save()
-                    updated += 1
+                version = detect_sepa_type_and_version(f.xml_file.path)
+                f.version = version
+                f.save()
+                updated += 1
             except Exception as e:
-                failed.append({
-                    "id": sepa_file.id,
-                    "filename": sepa_file.xml_file.name,
-                    "error": str(e),
-                })
+                continue
 
         return Response({
-            "updated": updated,
-            "failed": failed,
+            "updated_files": updated,
+            "total_files": files.count()
         })
+
 
 class ValidateFromURLAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, format=None):
+    def post(self, request):
         url = request.data.get("url")
         if not url:
-            return Response({"error": "URL manquante."}, status=400)
+            return Response({"error": "URL non fournie."}, status=400)
 
         try:
-            response = requests.get(url)
-            if response.status_code != 200:
-                return Response({"error": "Impossible de télécharger le fichier."}, status=400)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp:
+                response = requests.get(url)
+                tmp.write(response.content)
+                tmp_path = tmp.name
 
-            if "xml" not in response.headers.get("Content-Type", ""):
-                return Response({"error": "Le fichier téléchargé n'est pas un XML."}, status=400)
-
-            #  Sauvegarde temporaire
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp_file:
-                tmp_file.write(response.content)
-                tmp_path = tmp_file.name
-
-            # ✅ Validation
             result = validate_xml_professionally(tmp_path)
-            report = []
-
-            if result["xsd_valid"]:
-                report.append("✅ Validation XSD réussie.")
-            else:
-                report.append(f"❌ {result['xsd_message']}")
-
-            report.append("\n🔍 Règles métier :")
-            for rule in result["business_checks"]:
-                report.append(rule)
-
-            #  Enregistrement en base
-            sepa_file = SepaFile.objects.create(
-                uploaded_by=request.user,
-                xml_file=None,
-                is_valid=result["xsd_valid"] and all("❌" not in r for r in result["business_checks"]),
-                validation_report="\n".join(report),
-                version=result.get("version", "")
+            structured_report = (
+                (result["xsd_message"]["errors"] if isinstance(result["xsd_message"], dict) and not result["xsd_valid"] else []) +
+                result["basic_checks"] +
+                result["business_checks"]
             )
-
-            serializer = SepaValidationResultSerializer(sepa_file, context={"request": request})
-            return Response(serializer.data, status=200)
+            return Response({
+                "sepa_version": result["sepa_version"],
+                "xsd_valid": result["xsd_valid"],
+                "report": structured_report
+            })
 
         except Exception as e:
-            return Response({"error": f"Erreur : {str(e)}"}, status=500)
+            return Response({"error": str(e)}, status=500)
