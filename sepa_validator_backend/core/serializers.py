@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SepaFile
+from .models import SepaFile, Notification
 from core.utils.sepa_extractor import extract_sepa_details
 
 class SepaFileUploadSerializer(serializers.ModelSerializer):
@@ -51,3 +51,34 @@ class SepaValidationResultSerializer(serializers.ModelSerializer):
             except Exception as e:
                 return {"error": f"Erreur lors de l'extraction : {str(e)}"}
         return None
+    
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'title',
+            'message',
+            'level',
+            'is_read',
+            'created_at',
+            'related_file'
+        ]
+    
+class SepaFileAdminSerializer(serializers.ModelSerializer):
+    filename = serializers.SerializerMethodField()
+    owner_email = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SepaFile
+        fields =[
+            "id", "filename", "xml_file", "uploaded_at", "owner", "owner_email", "version", "is_valid", "validation_report", "extracted_data"
+        ]
+        read_only_fields = ["uploaded_at", "filename", "owner_email"]
+    
+    def get_filename(self, obj):
+        return obj.xml_file.name.split("/")[-1]
+    
+    def get_owner_email(self, obj):
+        return getattr(obj.owner, "email", None)
+    

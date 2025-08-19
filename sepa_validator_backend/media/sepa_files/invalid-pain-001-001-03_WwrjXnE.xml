@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>INV-2025-0001</MsgId>
+      <CreDtTm>2025-07-32T25:61:00</CreDtTm> <!-- ⚠️ Date invalide -->
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>-200.00</CtrlSum> <!-- ⚠️ Montant négatif -->
+      <InitgPty>
+        <Nm>Entreprise Test</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PmtInfo001</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>true</BtchBookg>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>200.00</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>2025-02-30</ReqdExctnDt> <!-- ⚠️ Date non existante -->
+
+      <Dbtr>
+        <Nm></Nm> <!-- ⚠️ Nom vide -->
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>INVALIDIBAN1234</IBAN> <!-- ⚠️ IBAN invalide -->
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>MARKDEFF</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>TRANS001</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">200.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>DEUTDEFF</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Fournisseur Exemple</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89370400440532013000</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Facture Juillet</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>

@@ -1,14 +1,21 @@
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework.authtoken.views import obtain_auth_token
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('core.urls')),
-    path('api/', include('core.api_urls')),  # ajoute cette ligne pour inclure les routes de api_urls
-    path('api/token/', obtain_auth_token, name='api_token_auth'),
+    path("admin/", admin.site.urls),
+
+    # Comptes (JWT + profil)
+    path("api/accounts/", include("accounts.urls")),
+
+    path("api/admin/", include("core.admin_urls")),
+
+    # API métier (SEPA, stats, uploads…)
+    path("api/", include("core.api_urls")),
+
+    # (optionnel) routes non-API de core
+    path("", include("core.urls")),
 ]
 
 if settings.DEBUG:
