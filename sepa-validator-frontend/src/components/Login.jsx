@@ -1,30 +1,43 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "./LanguageSwitcher";
 import "../assets/styles.css";
 import logo from "../assets/logo.png";
+import { useAuth } from "../store/AuthContext";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { reloadMe } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors("");
-
+    setLoading(true);
     try {
-      const res = await axios.post("http://localhost:8000/api/login/", {
+      const base = process.env.REACT_APP_BASE_URL || "http://localhost:8000";
+      const res = await axios.post(`${base}/api/accounts/login/`, {
         username,
         password,
       });
 
-      localStorage.setItem("token", res.data.token);
-      navigate("/dashboard");
+      // Stocker le token d'accès et le refresh token
+      localStorage.setItem("access", res.data.access);
+      localStorage.setItem("refresh", res.data.refresh);
+
+      await reloadMe();
+      navigate("/dashboard", {replace: true});
     } catch (err) {
       console.error(err);
-      setErrors("Nom d'utilisateur ou mot de passe invalide.");
+      setErrors(t("login.error"));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,11 +54,15 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Formulaire */}
+          {/* Form */}
           <div className="col-lg-6">
             <div className="card2 card border-0 px-4 py-5">
+              <div className="d-flex justify-content-end mb-2">
+                <LanguageSwitcher />
+              </div>
+
               <div className="row px-3 mb-4">
-                <h5 className="mb-0 mr-4 mt-2">Sign in</h5>
+                <h5 className="mb-0 mr-4 mt-2">{t("login.title")}</h5>
               </div>
 
               {errors && (
@@ -57,7 +74,7 @@ const Login = () => {
               <form onSubmit={handleSubmit}>
                 <div className="row px-3">
                   <label className="mb-1">
-                    <h6 className="mb-0 text-sm">Username</h6>
+                    <h6 className="mb-0 text-sm">{t("login.username")}</h6>
                   </label>
                   <input
                     type="text"
@@ -70,7 +87,7 @@ const Login = () => {
 
                 <div className="row px-3 mt-3">
                   <label className="mb-1">
-                    <h6 className="mb-0 text-sm">Password</h6>
+                    <h6 className="mb-0 text-sm">{t("login.password")}</h6>
                   </label>
                   <input
                     type="password"
@@ -83,15 +100,15 @@ const Login = () => {
 
                 <div className="row mb-3 px-3 mt-4">
                   <button type="submit" className="btn btn-blue text-center">
-                    Login
+                    {t("login.login_button")}
                   </button>
                 </div>
 
                 <div className="row mb-4 px-3">
                   <small className="font-weight-bold">
-                    Don't have an account?{" "}
+                    {t("login.no_account")}{" "}
                     <a className="text-danger" href="/signup">
-                      Register
+                      {t("login.register_link")}
                     </a>
                   </small>
                 </div>
@@ -102,7 +119,7 @@ const Login = () => {
 
         {/* Footer */}
         <div className="bg-blue py-4 text-center">
-          <small className="text-white">© 2025. All rights reserved.</small>
+          <small className="text-white">© 2025. {t("login.footer")}</small>
         </div>
       </div>
     </div>

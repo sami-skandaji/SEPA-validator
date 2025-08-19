@@ -1,0 +1,41 @@
+{
+  "sepaDetail": {
+    "title": "Résultat de validation",
+    "basicInfo": {
+      "section": "Informations générales",
+      "filename": "Nom du fichier",
+      "uploadDate": "Date d’upload",
+      "valid": "Valide ?",
+      "version": "Version SEPA"
+    },
+    "summary": {
+      "section": "Résumé de la validation",
+      "success": "✅ Ce fichier SEPA est valide.",
+      "failure": "❌ Ce fichier SEPA est invalide."
+    },
+    "report": {
+      "section": "Rapport de validation",
+      "basicRules": "Vérifications de base",
+      "xsdRules": "Vérifications du schéma XSD",
+      "businessRules": "Règles métier",
+      "noIssues": "✅ Aucun problème détecté pour cette catégorie.",
+      "noReport": "Aucun rapport de validation disponible."
+    },
+    "details": {
+      "section": "Détails du fichier SEPA",
+      "groupHeader": "En-tête",
+      "groupPayments": "Paiements",
+      "groupTransactions": "Transactions",
+      "groupMandates": "Mandats",
+      "noDetails": "Aucun détail extrait du fichier."
+    },
+    "buttons": {
+      "back": "Retour au tableau de bord",
+      "download": "Télécharger le XML"
+    },
+    "badges": {
+      "yes": "Oui",
+      "no": "Non"
+    }
+  }
+}

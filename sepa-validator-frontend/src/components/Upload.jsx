@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../axiosInstance";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useTranslation } from "react-i18next";
 import "../assets/styles.css";
+import UploadFromURL from "../pages/UploadFromURL";
+import UploadZIP from "./UploadZip";
 
 const Upload = () => {
+  const { t } = useTranslation();
   const [file, setFile] = useState(null);
   const [xmlContent, setXmlContent] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -17,7 +21,6 @@ const Upload = () => {
     setFile(selectedFile);
     setError("");
 
-    // Lire le contenu XML
     if (selectedFile) {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -32,7 +35,7 @@ const Upload = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      setError("Veuillez sélectionner un fichier XML.");
+      setError(t("upload.error_no_file"));
       return;
     }
 
@@ -42,10 +45,9 @@ const Upload = () => {
     setError("");
 
     try {
-      const res = await axios.post("http://localhost:8000/api/upload/", formData, {
+      const res = await axiosInstance.post("/api/upload/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Token ${localStorage.getItem("token")}`,
         },
       });
 
@@ -54,7 +56,7 @@ const Upload = () => {
       const errorMsg =
         err.response?.data?.detail ||
         err.response?.data?.xml_file?.[0] ||
-        "Erreur inconnue lors de la validation.";
+        t("upload.error_unknown");
       setError(errorMsg);
     } finally {
       setIsUploading(false);
@@ -63,15 +65,13 @@ const Upload = () => {
 
   return (
     <div className="container mt-5">
-      <h2 className="text-center text-primary fw-bold mb-4">
-        Validateur de fichiers SEPA
-      </h2>
-
+      <div className="text-end mb-3">
+      </div>
       <div className="card shadow p-4">
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label htmlFor="xmlFile" className="form-label fw-semibold">
-              Sélectionner un fichier XML :
+              {t("upload.label_select_file")}
             </label>
             <input
               type="file"
@@ -85,13 +85,15 @@ const Upload = () => {
 
           {file && (
             <div className="alert alert-info py-2">
-              Fichier sélectionné : <strong>{file.name}</strong>
+              {t("upload.selected_file")} <strong>{file.name}</strong>
             </div>
           )}
 
           {xmlContent && (
             <div className="mb-3">
-              <label className="form-label fw-semibold">Contenu XML :</label>
+              <label className="form-label fw-semibold">
+                {t("upload.label_preview")}
+              </label>
               <div className="border rounded p-3 bg-dark text-light" style={{ maxHeight: "400px", overflowY: "auto" }}>
                 <SyntaxHighlighter language="xml" style={atomDark} showLineNumbers wrapLongLines>
                   {xmlContent}
@@ -111,20 +113,18 @@ const Upload = () => {
               {isUploading ? (
                 <>
                   <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Envoi en cours...
+                  {t("upload.sending")}
                 </>
               ) : (
-                "Valider le fichier"
+                t("upload.submit")
               )}
             </button>
           </div>
         </form>
 
-        <div className="text-center mt-4">
-          <button className="btn btn-outline-secondary" onClick={() => navigate("/dashboard")}>
-            ⬅ Retour au tableau de bord
-          </button>
-        </div>
+        <UploadFromURL />
+        <hr />
+        <UploadZIP />
       </div>
     </div>
   );

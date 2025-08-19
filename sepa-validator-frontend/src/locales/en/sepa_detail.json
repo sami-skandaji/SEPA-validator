@@ -1,0 +1,41 @@
+{
+  "sepaDetail": {
+    "title": "Validation Result",
+    "basicInfo": {
+      "section": "General Information",
+      "filename": "Filename",
+      "uploadDate": "Upload Date",
+      "valid": "Valid?",
+      "version": "SEPA Version"
+    },
+    "summary": {
+      "section": "Validation Summary",
+      "success": "✅ This SEPA file is valid.",
+      "failure": "❌ This SEPA file is invalid."
+    },
+    "report": {
+      "section": "Validation Report",
+      "basicRules": "Basic Checks",
+      "xsdRules": "XSD Schema Checks",
+      "businessRules": "Business Rule Checks",
+      "noIssues": "✅ No issues found for this category.",
+      "noReport": "No validation report available."
+    },
+    "details": {
+      "section": "SEPA File Details",
+      "groupHeader": "Header",
+      "groupPayments": "Payments",
+      "groupTransactions": "Transactions",
+      "groupMandates": "Mandates",
+      "noDetails": "No details extracted from the file."
+    },
+    "buttons": {
+      "back": "Back to Dashboard",
+      "download": "Download XML"
+    },
+    "badges": {
+      "yes": "Yes",
+      "no": "No"
+    }
+  }
+}

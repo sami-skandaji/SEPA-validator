@@ -1,58 +1,52 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../axiosInstance";
+import { useTranslation } from "react-i18next";
 
 const DashboardActions = ({ username }) => {
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
-
+  const { t } = useTranslation();
+  
   const handleUpdateVersions = async () => {
-    const confirmed = window.confirm("Mettre à jour les versions PAIN des anciens fichiers ?");
+    const confirmed = window.confirm(t("dashboard.confirm_update_versions"));
     if (!confirmed) return;
 
     try {
-      const res = await axios.post("http://localhost:8000/api/update-versions/", null, {
-        headers: {
-          Authorization: `Token ${localStorage.getItem("token")}`,
-        },
-      });
-      alert(`Mise à jour terminée : ${res.data.updated} fichiers mis à jour`);
+      const res = await axiosInstance.post("/api/update-versions/", null);
+      alert(t("dashboard.update_success", { count: res.data.updated }));
       window.location.reload();
     } catch (err) {
-      alert("Erreur lors de la mise à jour des versions");
+      alert(t("dashboard.update_error"));
       console.error(err);
     }
   };
 
   return (
     <div className="card shadow text-center mb-5 p-4">
-      <h3 className="mb-4 fw-bold text-primary text-center">Bienvenue, {username} 👋</h3>
-      <p className="lead">Que souhaitez-vous faire aujourd’hui ?</p>
+      {/* ✅ Texte introductif */}
+      <p className="lead">{t("dashboard.subtitle")}</p>
 
+      {/* ✅ Boutons d’action */}
       <div className="d-flex flex-wrap justify-content-center gap-3 mt-4">
         <button
           className="btn btn-outline btn-lg text-dark border-dark"
           onClick={() => navigate("/upload")}
         >
-          Valider un fichier SEPA
+          {t("dashboard.btn_validate")}
+        </button>
+
+        <button
+          className="btn btn-outline btn-lg text-dark border-dark"
+          onClick={() => navigate("/statistics")}
+        >
+          {t("dashboard.btn_statistics")}
         </button>
 
         <button
           className="btn btn-outline btn-lg text-dark border-dark"
           onClick={handleUpdateVersions}
         >
-          Mettre à jour les versions
-        </button>
-
-        <button
-          className="btn btn-outline btn-lg text-dark border-dark"
-          onClick={handleLogout}
-        >
-          Se déconnecter
+          {t("dashboard.btn_update_versions")}
         </button>
       </div>
     </div>

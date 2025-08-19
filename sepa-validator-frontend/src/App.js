@@ -1,25 +1,58 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Dashboard from "./components/Dashboard";
 import Upload from "./components/Upload";
-import CompleteProfile from "./components/CompleteProfile";
 import PrivateRoute from "./PrivateRoute";
-import SepaDetailPage from './components/SepaDetailPage';
+import SepaDetailPage from "./components/SepaDetailPage";
+import UploadZip from "./components/UploadZip";
+import Statistics from "./pages/Statistics";
+import AdminDashboard from "./pages/AdminDashboard";
+
+import RoleGuard from "./components/RoleGuard";
+import AccountPage from "./pages/AccountPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
+
+import AppLayout from "./components/AppLayout"; // ✅ layout avec Navbar + Sidebar
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Routes publiques (pas de Navbar ici) */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/complete-profile" element={<CompleteProfile />} />
 
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/upload" element={<PrivateRoute><Upload /></PrivateRoute>} />
-        <Route path="/sepa/:id" element={<PrivateRoute><SepaDetailPage /></PrivateRoute>} />
+        {/* Routes privées avec Navbar + Sidebar via AppLayout */}
+        <Route
+          element={
+            <PrivateRoute>
+              <AppLayout />
+            </PrivateRoute>
+          }
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/upload-zip" element={<UploadZip />} />
+          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/account/password" element={<ChangePasswordPage />} />
+          <Route path="/sepa/:id" element={<SepaDetailPage />} />
 
-        <Route path="*" element={<Navigate to="/login" />} />
+          {/* Admin protégé */}
+          <Route
+            path="/admin"
+            element={
+              <RoleGuard need="ADMIN">
+                <AdminDashboard />
+              </RoleGuard>
+            }
+          />
+        </Route>
+
+        {/* Redirection par défaut */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

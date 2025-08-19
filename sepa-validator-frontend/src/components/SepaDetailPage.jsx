@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../axiosInstance";
 import { jsPDF } from "jspdf";
 import { saveAs } from "file-saver";
-import autoTable from 'jspdf-autotable';
+import autoTable from "jspdf-autotable";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 function SepaDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const [meta, setMeta] = useState(null);
   const [details, setDetails] = useState(null);
@@ -13,48 +16,48 @@ function SepaDetailPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchFile = async () => {
-      try {
-        const res = await axios.get(`http://localhost:8000/api/results/${id}/`, {
-          headers: {
-            Authorization: `Token ${localStorage.getItem("token")}`,
-          },
-        });
-
-        setMeta({
-          file_name: res.data.filename,
-          validation_result: [
-            ...(res.data.validation_report || []),
-            ...(res.data.business_checks || [])  // 👈 on ajoute les règles métier
-          ]
-        });
-
-        setDetails(res.data.sepa_details);
-      } catch (err) {
-        setError("Erreur lors du chargement du fichier SEPA.");
+  const fetchFile = async () => {
+    try {
+      const res = await axiosInstance.get(`/api/results/${id}/`);
+      setMeta({
+        file_name: res.data.filename,
+        validation_result: [
+          ...(res.data.validation_report || []),
+          ...(res.data.business_checks || []),
+        ],
+      });
+      setDetails(res.data.sepa_details);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        // Token vraiment expiré
+        navigate("/login");
+      } else {
+        setError(t("detail.error_loading"));
       }
-    };
-    fetchFile();
-  }, [id]);
+    }
+  };
+
+  fetchFile();
+}, [id, navigate, t]);
 
   const exportToPDF = () => {
     const doc = new jsPDF();
 
     doc.setFontSize(16);
-    doc.text("Rapport de validation SEPA", 14, 20);
+    doc.text(t("detail.pdf_title"), 14, 20);
 
     doc.setFontSize(12);
-    doc.text(`Nom du fichier : ${meta.file_name}`, 14, 30);
-    doc.text(`Nombre de messages : ${meta.validation_result.length}`, 14, 38);
+    doc.text(`${t("detail.file_name")} : ${meta.file_name}`, 14, 30);
+    doc.text(`${t("detail.message_count")} : ${meta.validation_result.length}`, 14, 38);
 
     autoTable(doc, {
       startY: 45,
-      head: [["Type", "Code", "Champ", "Message"]],
-      body: meta.validation_result.map(msg => [
+      head: [[t("detail.type"), t("detail.code"), t("detail.field"), t("detail.message")]],
+      body: meta.validation_result.map((msg) => [
         (msg.type || "").toUpperCase(),
         msg.code,
         msg.field,
-        msg.message
+        translateMessage(msg),
       ]),
       styles: { fontSize: 10, cellPadding: 3 },
       headStyles: { fillColor: [22, 160, 133] },
@@ -62,19 +65,19 @@ function SepaDetailPage() {
         0: { cellWidth: 20 },
         1: { cellWidth: 20 },
         2: { cellWidth: 35 },
-        3: { cellWidth: 115 }
-      }
+        3: { cellWidth: 115 },
+      },
     });
     doc.save(`${meta.file_name || "rapport-sepa"}.pdf`);
   };
 
   const exportToTXT = () => {
-    let txt = `--- Rapport de validation SEPA ---\n`;
-    txt += `Fichier : ${meta.file_name}\n`;
-    txt += `Nombre de messages : ${meta.validation_result.length}\n\n`;
+    let txt = `--- ${t("detail.txt_title")} ---\n`;
+    txt += `${t("detail.file_name")} : ${meta.file_name}\n`;
+    txt += `${t("detail.message_count")} : ${meta.validation_result.length}\n\n`;
 
     meta.validation_result.forEach((msg, i) => {
-      txt += `${i + 1}. [${(msg.type || "").toUpperCase()}] Code: ${msg.code}, Champ: ${msg.field}\n    → ${msg.message}\n\n`;
+      txt += `${i + 1}. [${(msg.type || "").toUpperCase()}] ${t("detail.code")}: ${msg.code}, ${t("detail.field")}: ${msg.field}\n    → ${translateMessage(msg)}\n\n`;
     });
 
     const blob = new Blob([txt], {
@@ -83,57 +86,68 @@ function SepaDetailPage() {
     saveAs(blob, `${meta.file_name || "rapport-sepa"}.txt`);
   };
 
-  if (error) return <p className="text-danger">{error}</p>;
-  if (!meta || !details) return <p>Chargement...</p>;
+  const translateMessage = (msg) => {
+    if (typeof msg === 'string') {
+      return t(`validation.${msg}`, msg);
+    } else if (typeof msg === 'object' && msg.code) {
+      return t(`validation.${msg.code}`, msg.message || msg.code);
+    } else if (typeof msg === 'object' && msg.message) {
+      return msg.message;
+    }
+    return t('validation.UnknownError');
+  };
 
-  const plainTextReport = meta.validation_result
-    .map(msg => `${(msg.type || "").toUpperCase()} [${msg.code}] (${msg.field}) → ${msg.message}`)
-    .join("\n");
+
+  if (error) return <p className="text-danger">{error}</p>;
+  if (!meta || !details) return <p>{t("detail.loading")}</p>;
+
+
 
   return (
     <div className="container py-4">
-      <div className="d-flex align-items-center gap-3 mb-3">
-        <button onClick={() => navigate("/dashboard")} className="btn btn-blue text-center">
-          <i className="bi bi-arrow-left"></i> Dashboard
-        </button>
-        <button onClick={() => navigate("/upload")} className="btn btn-blue text-center">
-          <i className="bi bi-plus-circle"></i> Nouveau fichier
-        </button>
-      </div>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h4 fw-bold">Détails du fichier SEPA</h1>
+        <div>
+          <h1 className="h4 fw-bold">{t("detail.page_title")}</h1>
+        </div>
         <div className="btn-group">
-          <button className="btn btn-outline-primary d-flex align-items-center gap-2" onClick={exportToPDF}>
-            Exporter en PDF
+          <button className="btn btn-blue text-center" onClick={exportToPDF}>
+            {t("detail.export_pdf")}
           </button>
-          <button className="btn btn-outline-primary d-flex align-items-center gap-2" onClick={exportToTXT}>
-            Exporter en TXT
+          <button className="btn btn-blue text-center" onClick={exportToTXT}>
+            {t("detail.export_txt")}
           </button>
         </div>
       </div>
 
-      <p className="fw-medium mb-3">Nom du fichier : {meta.file_name}</p>
+      <p className="fw-medium mb-3">
+        {t("detail.file_name")} : {meta.file_name}
+      </p>
 
       <section className="mb-4">
-        <h5 className="fw-bold mb-2">Résultats de validation</h5>
+        <h5 className="fw-bold mb-2">{t("detail.validation_results")}</h5>
         {meta.validation_result.length > 0 ? (
           <div className="table-responsive">
             <table className="table table-bordered table-sm">
               <thead className="table-light">
                 <tr>
-                  <th>Type</th>
-                  <th>Code</th>
-                  <th>Champ</th>
-                  <th>Message</th>
+                  <th>{t("detail.type")}</th>
+                  <th>{t("detail.code")}</th>
+                  <th>{t("detail.field")}</th>
+                  <th>{t("detail.message")}</th>
                 </tr>
               </thead>
               <tbody>
                 {meta.validation_result.map((msg, idx) => (
-                  <tr key={idx} className={
-                    msg.type === "error" ? "table-danger" :
-                    msg.type === "warning" ? "table-warning" :
-                    "table-success"
-                  }>
+                  <tr
+                    key={idx}
+                    className={
+                      msg.type === "error"
+                        ? "table-danger"
+                        : msg.type === "warning"
+                        ? "table-warning"
+                        : "table-success"
+                    }
+                  >
                     <td>
                       {msg.type === "error" && "❌"}
                       {msg.type === "warning" && "⚠️"}
@@ -141,42 +155,56 @@ function SepaDetailPage() {
                     </td>
                     <td>{msg.code}</td>
                     <td>{msg.field}</td>
-                    <td>{msg.message}</td>
+                    <td>{t(`validation.${msg.code}`, { iban: msg.message, defaultValue: msg.message })}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-muted">Aucun message de validation.</p>
+          <p className="text-muted">{t("detail.no_messages")}</p>
         )}
       </section>
 
       {details.entete && (
         <section className="mb-4">
-          <h5 className="fw-bold mb-2">En-tête</h5>
-          <ul>
-            <li>Référence remise : {details.entete.reference_remise}</li>
-            <li>Date de création : {details.entete.date_creation}</li>
-            <li>Nombre de transactions : {details.entete.nombre_transactions}</li>
-            <li>Montant total : {details.entete.montant_total}</li>
-          </ul>
+          <h5 className="fw-bold mb-2">{t("detail.header_info")}</h5>
+          <div className="table-responsive">
+            <table className="table table-bordered table-sm">
+              <thead className="table-light">
+                <tr>
+                  <th>{t("detail.submission_ref")}</th>
+                  <th>{t("detail.creation_date")}</th>
+                  <th>{t("detail.transaction_count")}</th>
+                  <th>{t("detail.total_amount")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{details.entete.reference_remise}</td>
+                  <td>{details.entete.date_creation}</td>
+                  <td>{details.entete.nombre_transactions}</td>
+                  <td>{details.entete.montant_total}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
       <section className="mb-4">
-        <h5 className="fw-bold mb-2">Informations des paiements</h5>
+        <h5 className="fw-bold mb-2">{t("detail.payment_info")}</h5>
         {details.paiements && details.paiements.length > 0 ? (
           <div className="table-responsive">
             <table className="table table-bordered table-sm">
               <thead className="table-light">
                 <tr>
                   <th>ID</th>
-                  <th>Méthode</th>
-                  <th>Service Level</th>
-                  <th>Instrument local</th>
-                  <th>Type séquence</th>
-                  <th>Date d'exécution</th>
+                  <th>{t("detail.method")}</th>
+                  <th>{t("detail.service_level")}</th>
+                  <th>{t("detail.local_instrument")}</th>
+                  <th>{t("detail.sequence_type")}</th>
+                  <th>{t("detail.execution_date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,22 +222,22 @@ function SepaDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="text-muted">Aucun paiement trouvé.</p>
+          <p className="text-muted">{t("detail.no_payments")}</p>
         )}
       </section>
 
       <section className="mb-4">
-        <h5 className="fw-bold mb-2">Transactions</h5>
+        <h5 className="fw-bold mb-2">{t("detail.transactions")}</h5>
         {details.transactions && details.transactions.length > 0 ? (
           <div className="table-responsive">
             <table className="table table-bordered table-sm">
               <thead className="table-light">
                 <tr>
-                  <th>Nom</th>
+                  <th>{t("detail.name")}</th>
                   <th>IBAN</th>
-                  <th>Référence</th>
-                  <th>Montant</th>
-                  <th>Avertissements</th>
+                  <th>{t("detail.reference")}</th>
+                  <th>{t("detail.amount")}</th>
+                  <th>{t("detail.warnings")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,20 +264,20 @@ function SepaDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="text-muted">Aucune transaction trouvée.</p>
+          <p className="text-muted">{t("detail.no_transactions")}</p>
         )}
       </section>
 
       <section className="mb-5">
-        <h5 className="fw-bold mb-2">Informations des mandats</h5>
+        <h5 className="fw-bold mb-2">{t("detail.mandates_info")}</h5>
         {details.mandats && details.mandats.length > 0 ? (
           <div className="table-responsive">
             <table className="table table-bordered table-sm">
               <thead className="table-light">
                 <tr>
-                  <th>Mandat ID</th>
-                  <th>Date de signature</th>
-                  <th>Amendé</th>
+                  <th>{t("detail.mandate_id")}</th>
+                  <th>{t("detail.signature_date")}</th>
+                  <th>{t("detail.amended")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -257,14 +285,14 @@ function SepaDetailPage() {
                   <tr key={idx}>
                     <td>{m.mandate_id}</td>
                     <td>{m.signature_date}</td>
-                    <td>{m.amendment ? "Oui" : "Non"}</td>
+                    <td>{m.amendment ? t("detail.yes") : t("detail.no")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-muted">Aucun mandat trouvé.</p>
+          <p className="text-muted">{t("detail.no_mandates")}</p>
         )}
       </section>
     </div>

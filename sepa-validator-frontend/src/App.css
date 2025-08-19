@@ -36,3 +36,43 @@
     transform: rotate(360deg);
   }
 }
+.container {
+  position: relative;
+  z-index: 2;
+}
+.bg-app {
+  background: linear-gradient(90deg, #e6f0ff 0%, #fff 40%, #fff6e6 100%);
+}
+
+.card-shadow {
+  box-shadow: 0 10px 30px rgba(18, 38, 63, 0.08);
+}
+
+.active-soft {
+  background: #f0f5ff !important;
+  color: #0d6efd !important;
+  border: 0 !important;
+}
+/* déjà utilisés ailleurs mais je les rappelle ici pour la page compte */
+.bg-app { background: linear-gradient(90deg, #e6f0ff 0%, #fff 40%, #fff6e6 100%); }
+.card-shadow { box-shadow: 0 10px 30px rgba(18,38,63,.08); }
+.active-soft { background:#f0f5ff !important; color:#0d6efd !important; border:0 !important; }
+
+/* bandeau pastel en haut de la carte (comme la maquette) */
+.band-soft {
+  height: 64px;
+  background: linear-gradient(90deg, rgba(92,147,255,0.12), rgba(255,197,120,0.12));
+}
+
+/* Inputs “soft” */
+.form-control-soft,
+.form-select.form-control-soft {
+  background-color: #f7f8fa;
+  border-color: #eef0f3;
+}
+.form-control-soft:focus,
+.form-select.form-control-soft:focus {
+  background-color: #fff;
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
+}

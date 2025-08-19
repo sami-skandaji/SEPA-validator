@@ -199,3 +199,148 @@ pre {
 h2 {
   font-weight: 600;
 }
+
+/* --- Light / Dark page backgrounds --- */
+.page-bg {
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e0f7fa 100%);
+  position: relative;
+}
+.page-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1200px 600px at 100% -10%, rgba(21,101,192,.08), transparent 60%),
+    radial-gradient(900px 450px at -10% 100%, rgba(124,58,237,.08), transparent 60%);
+  pointer-events: none;
+}
+
+/* Dark */
+.page-bg.dark {
+  background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+}
+.page-bg.dark::before {
+  background-image:
+    radial-gradient(1000px 500px at 100% -10%, rgba(59,130,246,.08), transparent 60%),
+    radial-gradient(800px 400px at -10% 100%, rgba(168,85,247,.08), transparent 60%);
+}
+
+/* Cards */
+.glass-card {
+  border: none !important;
+  border-radius: 16px !important;
+  background: rgba(255,255,255,.9) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 20px rgba(0,0,0,.08) !important;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.glass-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,.12) !important; }
+
+/* Dark card variant */
+.page-bg.dark .glass-card {
+  background: rgba(17,24,39,.6) !important; /* slate-900 alpha */
+  color: #e5e7eb; /* gray-200 */
+  box-shadow: 0 8px 24px rgba(0,0,0,.4) !important;
+}
+.page-bg.dark .glass-card .card-header {
+  border-bottom: 1px solid rgba(229,231,235,.08);
+}
+
+/* Headings/subtitles */
+.section-head h2 { font-weight: 700; margin-bottom: 4px; }
+.section-head p { color: #6b7280; margin: 0; }
+.page-bg.dark .section-head p { color: #9ca3af; }
+
+/* Toggle button look */
+.theme-toggle {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 600;
+  background: rgba(255,255,255,.9);
+}
+.page-bg.dark .theme-toggle {
+  background: rgba(17,24,39,.8);
+  color: #e5e7eb;
+  border: 1px solid rgba(229,231,235,.12);
+}
+/* 🌙 Mode sombre global */
+html.dark,
+.page-bg.dark {
+  background-color: #121212 !important;
+  color: #e5e7eb !important;
+}
+
+/* ✅ Cartes translucides avec contraste */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.dark .glass-card {
+  background: rgba(30, 30, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+
+/* ✅ Headers / footers des cartes */
+.card-header,
+.card-footer {
+  background: transparent !important;
+  border: none !important;
+  font-weight: 500;
+}
+
+.dark .card-header,
+.dark .card-footer {
+  color: #f3f4f6;
+}
+
+/* ✅ Inputs & selects */
+.form-control,
+.form-select {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+}
+
+.dark .form-control,
+.dark .form-select {
+  background-color: #1f2937 !important; /* gris foncé */
+  color: #e5e7eb !important;
+  border-color: #374151 !important;
+}
+
+.dark .form-control::placeholder,
+.dark .form-select option {
+  color: #9ca3af !important;
+}
+
+/* ✅ Boutons */
+.btn {
+  font-weight: 500;
+  border-radius: 0.5rem;
+}
+
+.dark .btn-outline-primary {
+  color: #60a5fa;
+  border-color: #60a5fa;
+}
+
+.dark .btn-outline-primary:hover {
+  background-color: #60a5fa;
+  color: #111827;
+}
+
+/* ✅ Progress bars */
+.progress {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .progress {
+  background-color: rgba(0, 0, 0, 0.4);
+}
