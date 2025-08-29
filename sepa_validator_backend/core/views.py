@@ -13,6 +13,7 @@ from .models import SepaFile
 #from core.sepa_business_rules import run_business_checks
 from .validators.validate_sepa_professionally import validate_xml_professionally
 
+"""
 def signup_view(request):
     form = UserCreationForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -28,6 +29,8 @@ def login_view(request):
         login(request, user)
         return redirect('home')
     return render(request, 'core/login.html', {'form': form})
+    
+    """
 
 def logout_view(request):
     logout(request)

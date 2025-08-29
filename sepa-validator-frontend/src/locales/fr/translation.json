@@ -65,7 +65,7 @@
 },
 "login": {
   "title": "Se connecter",
-  "username": "Nom d'utilisateur",
+  "username": "Nom d'utilisateur ou e-mail",
   "password": "Mot de passe",
   "login_button": "Connexion",
   "no_account": "Vous n'avez pas de compte ?",
@@ -157,7 +157,9 @@
     "error": "Erreur",
     "no_data": "Aucune donnée",
     "apply": "Appliquer",
-    "reset": "Réinitialiser"
+    "reset": "Réinitialiser",
+    "cancel": "Annuler",
+    "saving": "Sauvegarde…"
 },
 "statistics": {
     "title": "Statistiques",
@@ -208,7 +210,13 @@
     "unverified": "Non Verifié",
     "add_email": "Ajouter Addresse Email",
     "adding": "Ajout…",
-    "add_email_error": "Impossible d'Ajouter Un Email"
+    "add_email_error": "Impossible d'Ajouter Un Email",
+    "change_password": "Changer mot de passe",
+    "old_password": "Ancien mot de passe",
+    "new_password": "Nouveau mot de passe",
+    "confirm_new_password": "Confirmer nouveau mot de passe",
+    "update_password": "Modifier",
+    "password_changed": "Mot de passe modifié"
   },
   "placeholders": {
     "full_name": "Votre Nom Complet",

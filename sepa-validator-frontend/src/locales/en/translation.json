@@ -73,7 +73,7 @@
 },
 "login": {
   "title": "Sign in",
-  "username": "Username",
+  "username": "Username or e-mail",
   "password": "Password",
   "login_button": "Login",
   "no_account": "Don't have an account?",
@@ -168,7 +168,9 @@
     "error": "Error",
     "no_data": "No data",
     "apply": "Apply",
-    "reset": "Reset"
+    "reset": "Reset",
+    "cancel": "Cancel",
+    "saving": "Saving…"
 },
 "statistics": {
     "title": "Statistics",
@@ -218,7 +220,14 @@
     "unverified": "Unverified",
     "add_email": "Add Email Address",
     "adding": "Adding…",
-    "add_email_error": "Cannot add email"
+    "add_email_error": "Cannot add email",
+    "change_password": "Change password",
+    "old_password": "Old password",
+    "new_password": "New password",
+    "confirm_new_password": "Confirm new password",
+    "update_password": "Update",
+    "password_changed": "Password changed"
+
   },
   "placeholders": {
     "full_name": "Your First Name",

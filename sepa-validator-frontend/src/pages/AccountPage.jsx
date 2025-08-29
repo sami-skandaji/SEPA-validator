@@ -3,6 +3,8 @@ import React, { useEffect, useRef, useState } from "react";
 import axiosInstance from "../axiosInstance";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../store/AuthContext";
+import { absolutize } from "../utils/url";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 
 /** Endpoints */
 const PROFILE_GET = "/api/accounts/me/";
@@ -13,7 +15,7 @@ const AVATAR_UPLOAD = "/api/accounts/me/avatar/";
 
 export default function AccountPage() {
   const { t } = useTranslation();
-  const { setUser } = useAuth();
+  const { reloadMe } = useAuth();
 
   // Form state
   const [fullName, setFullName] = useState("");
@@ -54,7 +56,7 @@ export default function AccountPage() {
 
       setDisplayName(full || u.email || "User");
       setPrimaryEmail(u.email || "");
-      setAvatarUrl(u.avatar || DEFAULT_AVATAR);
+      setAvatarUrl(u.avatar ? absolutize(u.avatar) : DEFAULT_AVATAR);
 
       setFullName(u.full_name || full);
       setNickName(u.nick_name || u.username || "");
@@ -64,15 +66,17 @@ export default function AccountPage() {
       setTimezone(u.timezone || "Africa/Tunis");
 
       setEmails(Array.isArray(list.data) ? list.data : []);
-      // ✅ synchronise le contexte (Navbar) avec le dernier /me/
-      setUser(u);
     } catch (err) {
       console.error("Erreur chargement profil:", err);
     }
   };
 
   useEffect(() => {
-    loadProfile();
+    (async () => {
+      await loadProfile();
+      // garde le contexte aligné au 1er chargement (Navbar, etc.)
+      try { await reloadMe(); } catch {}
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -89,8 +93,10 @@ export default function AccountPage() {
         language,
         timezone,
       });
+      // synchro globale (Navbar + contexts)
+      try { await reloadMe(); } catch {}
+      await loadProfile();
       alert(t("account.saved") || "Saved");
-      await loadProfile(); // ✅ rechargement + setUser
     } catch (err) {
       console.error("Erreur update profil:", err);
       alert(t("account.save_error") || "Error while saving");
@@ -101,10 +107,11 @@ export default function AccountPage() {
 
   /** Ajout d’un email */
   const handleAddEmail = async () => {
-    if (!newEmail) return;
+    const emailToAdd = (newEmail || "").trim();
+    if (!emailToAdd) return;
     setAddingEmail(true);
     try {
-      const res = await axiosInstance.post(EMAILS_CREATE, { email: newEmail });
+      const res = await axiosInstance.post(EMAILS_CREATE, { email: emailToAdd });
       setEmails((prev) => [res.data, ...prev]);
       setNewEmail("");
     } catch (err) {
@@ -112,6 +119,17 @@ export default function AccountPage() {
       alert(t("account.add_email_error") || "Cannot add email");
     } finally {
       setAddingEmail(false);
+    }
+  };
+
+  const handleDeleteEmail = async (id) => {
+    if (!window.confirm(t("account.confirm_delete_email") || " Delete this email ?"))
+    try {
+      await axiosInstance.delete(`/api/accounts/emails/${id}/`);
+      setEmails(prev => prev.filter(e => e.id !== id));
+    } catch (e) {
+      console.error("Delete email error:", e);
+      alert(t("account.delete_email_error") || "Cannot delete email");
     }
   };
 
@@ -125,16 +143,16 @@ export default function AccountPage() {
       const res = await axiosInstance.put(AVATAR_UPLOAD, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      // si le serializer renvoie { avatar: "<abs url>" }
-      if (res.data && res.data.avatar) {
-        setAvatarUrl(res.data.avatar);
-        // ✅ met à jour le contexte user.avatar (Navbar)
-        const me = await axiosInstance.get(PROFILE_GET);
-        setUser(me.data);
+      const newUrl = res?.data?.avatar ? absolutize(res.data.avatar) : "";
+      if (newUrl) {
+        // cache-busting local pour que l’aperçu change instantanément
+        const busted = `${newUrl}${newUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
+        setAvatarUrl(busted);
       } else {
-        // sinon recharge tout
         await loadProfile();
       }
+      // synchro globale (Navbar)
+      try { await reloadMe(); } catch {}
     } catch (err) {
       console.error("Erreur upload avatar:", err);
       alert(t("account.avatar_error") || "Avatar upload failed");
@@ -144,7 +162,6 @@ export default function AccountPage() {
   return (
     <div className="card card-shadow border-0 rounded-4 overflow-hidden">
       <div className="band-soft" />
-
       <div className="card-body p-4 p-md-5">
         {/* En-tête avatar + nom + email + Edit */}
         <div className="d-flex align-items-center justify-content-between mb-4">
@@ -155,7 +172,6 @@ export default function AccountPage() {
               className="rounded-circle border"
               width="72"
               height="72"
-              onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
             />
             <div>
               <h6 className="mb-0">{displayName}</h6>
@@ -177,6 +193,14 @@ export default function AccountPage() {
               onClick={() => fileInputRef.current?.click()}
             >
               {t("account.edit") || "Edit"}
+            </button>
+            <button
+              className="btn btn-outline-secondary"
+              type="button"
+              data-bs-toggle="modal"
+              data-bs-target="#changePwdModal"
+            >
+              {t("account.change_password") || "Change Password"}
             </button>
           </div>
         </div>
@@ -299,6 +323,22 @@ export default function AccountPage() {
                       {e.is_verified ? (t("account.verified") || "Verified") : (t("account.unverified") || "Unverified")}
                     </small>
                   </div>
+
+                  <div className="d-flex align-items-center gap-2">
+                    <small className="text-muted">
+                      {e.created_at ? new Date(e.created_at).toLocaleDateString() : ""}
+                    </small>
+
+                    {!e.is_primary && (
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDeleteEmail(e.id)}
+                        title={t("account.delete_email") || "Delete email"}
+                      >
+                        {t("common.delete") || "Delete"}
+                      </button>
+                    )}
+                  </div>
                   <small className="text-muted">
                     {e.created_at ? new Date(e.created_at).toLocaleDateString() : ""}
                   </small>
@@ -322,6 +362,7 @@ export default function AccountPage() {
           </div>
         </div>
       </div>
+      <ChangePasswordModal id="changePwdModal" />
     </div>
   );
 }

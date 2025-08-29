@@ -1,0 +1,12 @@
+Bonjour {{ user.username }},
+
+Merci de vous être inscrit(e) sur SEPA Validator.
+
+Veuillez cliquer sur le lien ci-dessous pour vérifier votre adresse e-mail et activer votre compte :
+
+{{ activate_url }}
+
+Si vous n'avez pas créé ce compte, vous pouvez ignorer ce message.
+
+À bientôt,
+L'équipe SEPA Validator

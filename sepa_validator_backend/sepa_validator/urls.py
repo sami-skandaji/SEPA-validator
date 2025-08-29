@@ -14,6 +14,8 @@ urlpatterns = [
     # API métier (SEPA, stats, uploads…)
     path("api/", include("core.api_urls")),
 
+    path("accounts/", include("allauth.urls")),
+
     # (optionnel) routes non-API de core
     path("", include("core.urls")),
 ]

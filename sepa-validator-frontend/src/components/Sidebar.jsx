@@ -1,3 +1,4 @@
+// src/components/Sidebar.jsx
 import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import axiosInstance from "../axiosInstance";
@@ -8,13 +9,21 @@ export default function Sidebar() {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState([]);
 
+  // Helper: normaliser la réponse en tableau
+  const toArray = (data) => {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.results)) return data.results;
+    return [];
+    };
+
   // Récupération notifications
   const fetchNotifications = async () => {
     try {
       const res = await axiosInstance.get("/api/notifications/");
-      setNotifications(res.data);
+      setNotifications(toArray(res.data));
     } catch (err) {
       console.error("Erreur lors de la récupération des notifications :", err);
+      setNotifications([]); // sécurité
     }
   };
 
@@ -22,7 +31,7 @@ export default function Sidebar() {
     try {
       await axiosInstance.post(`/api/notifications/${id}/mark-read/`);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+        toArray(prev).map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
     } catch (err) {
       console.error("Erreur lors du marquage comme lu :", err);
@@ -33,10 +42,16 @@ export default function Sidebar() {
     fetchNotifications();
   }, []);
 
-  const hasUnread = notifications.some((n) => n.is_read === false);
-  const sortedNotifications = [...notifications].sort((a, b) =>
-    b.created_at.localeCompare(a.created_at)
-  );
+  // Protège l'accès à .some et au tri
+  const hasUnread =
+    Array.isArray(notifications) &&
+    notifications.some((n) => n && n.is_read === false);
+
+  const sortedNotifications = Array.isArray(notifications)
+    ? [...notifications].sort((a, b) =>
+        String(b?.created_at || "").localeCompare(String(a?.created_at || ""))
+      )
+    : [];
 
   return (
     <div className="card card-shadow border-0 rounded-4 p-3 h-100">
@@ -109,7 +124,7 @@ export default function Sidebar() {
         </li>
       </ul>
 
-      {/* ✅ Offcanvas pour notifications */}
+      {/* Offcanvas pour notifications */}
       <div
         className="offcanvas offcanvas-end"
         tabIndex="-1"
@@ -133,7 +148,9 @@ export default function Sidebar() {
           ) : (
             <ul className="list-unstyled">
               {sortedNotifications.map((notif) => {
-                const formattedDate = new Date(notif.created_at).toLocaleString();
+                const formattedDate = notif?.created_at
+                  ? new Date(notif.created_at).toLocaleString()
+                  : "";
 
                 return (
                   <li

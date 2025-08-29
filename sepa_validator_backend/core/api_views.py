@@ -1,41 +1,43 @@
 import os
 import tempfile
 import requests
+import zipfile
+import xml.etree.ElementTree as ET
+
+from datetime import timedelta, date
+from django.utils import timezone
+from django.core.files import File
+from django.core.signing import dumps, loads, BadSignature, SignatureExpired
+from django.core.mail import send_mail
+from django.conf import settings
 
 from rest_framework import status, generics, filters as drf_filters
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.generics import RetrieveAPIView, DestroyAPIView, RetrieveUpdateAPIView
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.filters import OrderingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
-from django.shortcuts import get_object_or_404
-from django.db.models import Count, Avg, BooleanField, ExpressionWrapper, Q
+from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
-from django.utils import timezone
-from django.utils.timezone import make_aware
-from datetime import timedelta, datetime, date
-from .models import SepaFile, Notification
+
+from .models import SepaFile, Notification, EmailAddress
 from .forms import SepaFileUploadForm
 from .validators.validate_sepa_professionally import validate_xml_professionally, detect_sepa_type_and_version
-from core.utils.sepa_extractor import extract_sepa_details
 from .serializers import SepaValidationResultSerializer, SepaFileUploadSerializer, NotificationSerializer
 from .filters import SepaFileFilter
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import User
-import xml.etree.ElementTree as ET
-
-import zipfile
-from django.core.files import File
-
+from core.utils.sepa_extractor import extract_sepa_details
 from core.utils.pdf_generator import generate_pdf_report
 from core.utils.email_utils import send_validation_email
 from core.utils.notifications import notify_user
+
+from django.contrib.auth import get_user_model
+from allauth.account.adapter import get_adapter
+from allauth.account.models import EmailAddress
+
+User = get_user_model()
 
 
 def _parse_iso_date(s: str) -> date | None:
@@ -44,64 +46,83 @@ def _parse_iso_date(s: str) -> date | None:
     except Exception:
         return None
 
-User = get_user_model()
 
+# -----------------------
+# AUTH / INSCRIPTION
+# -----------------------
 class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        data = request.data
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password1 = request.data.get("password1")
+        password2 = request.data.get("password2")
+        first_name = request.data.get("first_name", "")
+        last_name = request.data.get("last_name", "")
 
-        username    = (data.get("username") or "").strip()
-        email       = (data.get("email") or "").strip().lower()
-        first_name  = (data.get("first_name") or "").strip()
-        last_name   = (data.get("last_name") or "").strip()
+        # Vérifications de base
+        if not username or not email or not password1:
+            return Response({"error": "Champs manquants"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Supporte password/password_confirm OU password1/password2 OU confirmPassword
-        password  = data.get("password") or data.get("password1")
-        password2 = data.get("confirmPassword") or data.get("password_confirm") or data.get("password2")
+        if password1 != password2:
+            return Response({"error": "Les mots de passe ne correspondent pas"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not username or not email or not password or not password2:
-            return Response({"error": "Tous les champs obligatoires ne sont pas fournis."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(username=username).exists():
+            return Response({"error": "Nom d'utilisateur déjà pris"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if password != password2:
-            return Response({"error": "Les mots de passe ne correspondent pas."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(email=email).exists():
+            return Response({"error": "E-mail déjà utilisé"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if User.objects.filter(username__iexact=username).exists():
-            return Response({"error": "Ce nom d'utilisateur existe déjà."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if hasattr(User, "email") and User.objects.filter(email__iexact=email).exists():
-            return Response({"error": "Un compte avec cet e-mail existe déjà."}, status=status.HTTP_400_BAD_REQUEST)
-
+        # Création de l'utilisateur (inactive par défaut si ACCOUNT_EMAIL_VERIFICATION='mandatory')
         user = User.objects.create_user(
             username=username,
             email=email,
-            password=password,
+            password=password1,
             first_name=first_name,
             last_name=last_name,
         )
 
-        return Response({
-            "message": "Inscription réussie.",
-            "user": {
-                "id": user.pk,
-                "username": user.username,
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-            },
-        }, status=status.HTTP_201_CREATED)
+        # Crée l'EmailAddress et envoie le mail de confirmation
+        email_address, created = EmailAddress.objects.get_or_create(
+            user=user,
+            email=email,
+            primary=True
+        )
+        email_address.send_confirmation(request)
 
+        return Response(
+            {"message": "Inscription réussie. Un e-mail de confirmation a été envoyé."},
+            status=status.HTTP_201_CREATED
+        )
 
-class CustomAuthToken(ObtainAuthToken):
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({'token': token.key})
+class VerifyEmailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        token = request.query_params.get("token")
+        if not token:
+            return Response({"error": "Token manquant."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            data = loads(token, salt="email-confirm", max_age=60*60*24)
+        except SignatureExpired:
+            return Response({"error": "Lien expiré."}, status=status.HTTP_400_BAD_REQUEST)
+        except BadSignature:
+            return Response({"error": "Token invalide."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(pk=data["user_id"])
+        except User.DoesNotExist:
+            return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        ea = EmailAddress.objects.filter(user=user, email__iexact=data["email"]).first()
+        if not ea:
+            ea = EmailAddress.objects.create(user=user, email=data["email"], is_primary=True, is_verified=True)
+        else:
+            ea.is_verified = True
+            ea.save()
+
+        return Response({"message": "Adresse e-mail vérifiée avec succès."}, status=status.HTTP_200_OK)
 
 
 class UserInfoAPIView(APIView):
@@ -113,6 +134,12 @@ class UserInfoAPIView(APIView):
             "email": request.user.email,
         })
 
+
+# -----------------------
+# SEPA FILES
+# -----------------------
+# (Toutes les vues SepaUploadAPIView, SepaValidationResultListAPIView, etc. restent inchangées)
+# -----------------------
 
 class SepaUploadAPIView(APIView):
     parser_classes = [MultiPartParser]

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../store/AuthContext";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useTheme } from "../store/ThemeContext";
+import { absolutize } from "../utils/url";
 import "../assets/styles.css";
 
 export default function Navbar() {
@@ -20,11 +21,8 @@ export default function Navbar() {
     navigate("/login", { replace: true });
   };
 
-  const DEFAULT_AVATAR = user
-    ? `https://i.pravatar.cc/40?u=${encodeURIComponent(user.email || user.username || "x")}`
-    : "https://i.pravatar.cc/40?u=anon";
-
-  const avatarUrl = user?.avatar || DEFAULT_AVATAR;
+  const DEFAULT_AVATAR = "https://i.pravatar.cc/40?u=";
+  const avatarUrl = user?.avatar ? absolutize(user.avatar) : DEFAULT_AVATAR;
 
   return (
     <header className="card card-shadow border-0 rounded-4 mb-4 p-3 px-4 d-flex flex-row align-items-center justify-content-between">
@@ -48,8 +46,7 @@ export default function Navbar() {
         {user ? (
           <>
             <span className="navbar-text">
-              {t("navbar.logged_in_as")}{" "}
-              <strong>{user.nick_name || user.username || user.email}</strong>
+              {t("navbar.logged_in_as")} <strong>{user.nick_name || user.email}</strong>
             </span>
 
             <img
@@ -58,7 +55,6 @@ export default function Navbar() {
               className="rounded-circle border"
               width="40"
               height="40"
-              onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
             />
 
             <button onClick={handleLogout} className="btn btn-outline-danger">

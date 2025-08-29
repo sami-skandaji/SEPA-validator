@@ -40,7 +40,7 @@ const Signup = () => {
       setLoading(true);
 
       // ✅ Inscription
-      const res = await axios.post(`${base}/api/accounts/signup/`, {
+      const res = await axios.post(`${base}/api/accounts/register/`, {
         username: username.trim(),
         email: email.trim(),
         password1,
@@ -51,7 +51,7 @@ const Signup = () => {
 
       if (res.status === 201 || res.status === 200) {
         // ✅ Auto-login après inscription
-        const loginRes = await axios.post(`${base}/api/accounts/login/`, {
+        const loginRes = await axios.post(`${base}/api/accounts/token/`, {
           username: username.trim(),
           password: password1,
         });

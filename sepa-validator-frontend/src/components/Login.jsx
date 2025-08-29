@@ -22,7 +22,7 @@ const Login = () => {
     setLoading(true);
     try {
       const base = process.env.REACT_APP_BASE_URL || "http://localhost:8000";
-      const res = await axios.post(`${base}/api/accounts/login/`, {
+      const res = await axios.post(`${base}/api/accounts/token/`, {
         username,
         password,
       });
@@ -32,10 +32,25 @@ const Login = () => {
       localStorage.setItem("refresh", res.data.refresh);
 
       await reloadMe();
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error(err);
-      setErrors(t("login.error"));
+
+      // ✅ Extraire les messages d'erreur de Django
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === "string") {
+          setErrors(data); // message simple
+        } else {
+          const firstKey = Object.keys(data)[0];
+          const msg = Array.isArray(data[firstKey])
+            ? data[firstKey][0]
+            : data[firstKey] || t("login.error");
+          setErrors(msg);
+        }
+      } else {
+        setErrors(t("login.error"));
+      }
     } finally {
       setLoading(false);
     }
@@ -99,8 +114,8 @@ const Login = () => {
                 </div>
 
                 <div className="row mb-3 px-3 mt-4">
-                  <button type="submit" className="btn btn-blue text-center">
-                    {t("login.login_button")}
+                  <button type="submit" className="btn btn-blue text-center" disabled={loading}>
+                    {loading ? t("common.loading") || "Loading…" : t("login.login_button")}
                   </button>
                 </div>
 
